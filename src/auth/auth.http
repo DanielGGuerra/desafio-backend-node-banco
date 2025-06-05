@@ -1,3 +1,4 @@
+### Register new user
 POST http://localhost:3000/auth/register
 Content-Type: application/json
 
@@ -6,3 +7,17 @@ Content-Type: application/json
     "email": "userA@mail.com",
     "password": "UserA!00"
 }
+
+### Login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+    "email": "userA@mail.com",
+    "password": "UserA!00"
+}
+
+### Me
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWJqcXZvdDcwMDAwdnd2ZTZsNndsNXcwIiwiZW1haWwiOiJ1c2VyQUBtYWlsLmNvbSIsImlhdCI6MTc0OTE1MjU2NCwiZXhwIjoxNzQ5MjM4OTY0fQ.4i5iLB_Pz4tyN8bXY98J6pDdF0tNYRkg7oDshe7H1ak
+GET http://localhost:3000/auth/me
+Authorization: Bearer {{token}}
