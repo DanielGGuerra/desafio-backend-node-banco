@@ -1,0 +1,23 @@
+version: '3'
+
+networks:
+  networks_bank:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: database
+    environment:
+      POSTGRES_USER: DEV
+      POSTGRES_PASSWORD: Dev@123
+      POSTGRES_DB: SIMPLE_BANK
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - networks_bank
