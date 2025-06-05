@@ -24,6 +24,9 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^6.9.0",
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^6.0.0",
+    "decimal.js": "^10.5.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
