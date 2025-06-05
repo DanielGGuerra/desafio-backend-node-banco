@@ -4,6 +4,6 @@ import { HashUtils } from '../common/utils/hash';
 
 @Module({
   providers: [UsersService, HashUtils],
-  exports: [UsersModule],
+  exports: [UsersService],
 })
 export class UsersModule {}
