@@ -9,7 +9,7 @@ import { CreateUserDTO } from './dto/create-user.dto';
 import { HashUtils } from '../common/utils/hash';
 
 import { User } from '@prisma/client';
-import { PrismaService } from '../database/prisma/prisma.service';
+import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class UsersService {
