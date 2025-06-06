@@ -6,13 +6,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { HashUtils } from '../common/utils/hash';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     UsersModule,
     JwtModule.registerAsync({
-      inject: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow('JWT_SECRET'),
         signOptions: { expiresIn: config.getOrThrow('JWT_EXPIRATION') },
