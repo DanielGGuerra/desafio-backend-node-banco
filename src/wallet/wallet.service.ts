@@ -1,17 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
-import { PrismaService } from 'nestjs-prisma';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class WalletService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private usersService: UsersService) {}
 
   async balance(userId: string): Promise<string> {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+    const user = await this.usersService.findOne(userId);
 
     if (!user) {
       throw new NotFoundException('Wallet not found');

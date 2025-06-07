@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WalletService } from './wallet.service';
-import { PrismaService } from 'nestjs-prisma';
 import { User } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { UsersService } from '../users/users.service';
 
 describe('WalletService', () => {
   let service: WalletService;
-  let prismaService: PrismaService;
+  let usersService: UsersService;
 
   const userMock: User = {
     id: 'valid_id',
@@ -23,50 +23,40 @@ describe('WalletService', () => {
       providers: [
         WalletService,
         {
-          provide: PrismaService,
+          provide: UsersService,
           useValue: {
-            user: {
-              findUnique: jest.fn(),
-            },
+            findOne: jest.fn(),
           },
         },
       ],
     }).compile();
 
     service = module.get<WalletService>(WalletService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    usersService = module.get<UsersService>(UsersService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-    expect(prismaService).toBeDefined();
+    expect(usersService).toBeDefined();
   });
 
   describe('balance', () => {
     it('should return the balance of the user', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(userMock);
+      (usersService.findOne as jest.Mock).mockResolvedValue(userMock);
 
       const balance = await service.balance('valid_id');
 
       expect(balance).toBe('100.00');
-      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-        where: {
-          id: 'valid_id',
-        },
-      });
-      expect(prismaService.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(usersService.findOne).toHaveBeenCalledWith('valid_id');
+      expect(usersService.findOne).toHaveBeenCalledTimes(1);
     });
 
     it('should throw an error if the user is not found', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (usersService.findOne as jest.Mock).mockResolvedValue(null);
 
       await expect(service.balance('invalid_id')).rejects.toThrow();
-      expect(prismaService.user.findUnique).toHaveBeenCalledTimes(1);
-      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-        where: {
-          id: 'invalid_id',
-        },
-      });
+      expect(usersService.findOne).toHaveBeenCalledTimes(1);
+      expect(usersService.findOne).toHaveBeenCalledWith('invalid_id');
     });
   });
 });
