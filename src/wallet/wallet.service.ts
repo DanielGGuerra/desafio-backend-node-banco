@@ -214,4 +214,22 @@ export class WalletService {
       throw new InternalServerErrorException('Failed to chargeback');
     }
   }
+
+  async getAllTransactionsPaidByUser(userId: string): Promise<Transaction[]> {
+    const transactions = await this.prismaService.transaction.findMany({
+      where: { payerId: userId },
+    });
+
+    return transactions;
+  }
+
+  async getAllTransactionsReceivedByUser(
+    userId: string,
+  ): Promise<Transaction[]> {
+    const transactions = await this.prismaService.transaction.findMany({
+      where: { payeeId: userId },
+    });
+
+    return transactions;
+  }
 }
