@@ -6,9 +6,12 @@ import {
 } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
 import { UsersService } from '../users/users.service';
-import { Transaction } from '@prisma/client';
+import { Prisma, Transaction } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
-import { TransferParams } from './interfaces/wallet.models';
+import {
+  GetTransactionsParams,
+  TransferParams,
+} from './interfaces/wallet.models';
 
 @Injectable()
 export class WalletService {
@@ -215,19 +218,30 @@ export class WalletService {
     }
   }
 
-  async getAllTransactionsPaidByUser(userId: string): Promise<Transaction[]> {
-    const transactions = await this.prismaService.transaction.findMany({
-      where: { payerId: userId },
-    });
+  async getTransactions({
+    userId,
+    userRole,
+    ...params
+  }: GetTransactionsParams): Promise<Transaction[]> {
+    const where: Prisma.TransactionWhereInput = {
+      ...params,
+    };
 
-    return transactions;
-  }
+    if (userRole === 'payer') {
+      where.payerId = userId;
+    }
 
-  async getAllTransactionsReceivedByUser(
-    userId: string,
-  ): Promise<Transaction[]> {
+    if (userRole === 'payee') {
+      if (!params.payeeId) {
+        where.payeeId = userId;
+      }
+      if (!!params.payeeId && params.payeeId !== userId) {
+        throw new BadRequestException('Payee ID does not match user ID');
+      }
+    }
+
     const transactions = await this.prismaService.transaction.findMany({
-      where: { payeeId: userId },
+      where,
     });
 
     return transactions;

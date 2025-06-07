@@ -69,10 +69,10 @@ export class WalletController {
     @GetUser() user: User,
     @Query() query: GetTransactionQuery,
   ): Promise<ResponseTransactionDTO[]> {
-    const transactions =
-      query.type === 'paid'
-        ? await this.walletService.getAllTransactionsPaidByUser(user.id)
-        : await this.walletService.getAllTransactionsReceivedByUser(user.id);
+    const transactions = await this.walletService.getTransactions({
+      userId: user.id,
+      ...query,
+    });
 
     return transactions.map(
       (transaction) => new ResponseTransactionDTO(transaction),
