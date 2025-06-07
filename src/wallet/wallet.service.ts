@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
 import { UsersService } from '../users/users.service';
@@ -110,6 +111,107 @@ export class WalletService {
       });
     } catch {
       throw new InternalServerErrorException('Failed to transfer');
+    }
+  }
+
+  async chargeback(
+    payerId: string,
+    transactionId: string,
+  ): Promise<Transaction> {
+    const transactionToReverse =
+      await this.prismaService.transaction.findUnique({
+        include: {
+          payer: true,
+          payee: true,
+        },
+        where: { payerId, id: transactionId },
+      });
+
+    if (!transactionToReverse) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    if (transactionToReverse.status !== 'completed') {
+      throw new BadRequestException('Transaction is not completed');
+    }
+
+    if (transactionToReverse.type !== 'transfer') {
+      throw new BadRequestException('Transaction is not a transfer');
+    }
+
+    const { payer: payerToReverse, payee: payeeToReverse } =
+      transactionToReverse;
+
+    if (!payerToReverse || !payeeToReverse) {
+      throw new NotFoundException('Payer or payee not found');
+    }
+
+    const payerChargeback = payeeToReverse;
+    const payeeChargeback = payerToReverse;
+
+    const payerBalanceBefore = payerChargeback.balance;
+    const payerBalanceAfter = payerChargeback.balance.minus(
+      transactionToReverse.amount,
+    );
+
+    const chargebackTransaction = await this.prismaService.transaction.create({
+      data: {
+        status: 'pending',
+        type: 'chargeback',
+        amount: transactionToReverse.amount,
+        payerBalanceBefore,
+        payerBalanceAfter,
+        payerId: payerChargeback.id,
+        payeeId: payeeChargeback.id,
+        reversedTransactionId: transactionToReverse.id,
+      },
+    });
+
+    if (payerBalanceAfter.lessThan(0)) {
+      await this.prismaService.transaction.update({
+        where: { id: chargebackTransaction.id },
+        data: {
+          status: 'failed',
+          statusMotive: 'INSUFFICIENT_BALANCE',
+        },
+      });
+
+      throw new BadRequestException('Payee has insufficient balance');
+    }
+
+    try {
+      return await this.prismaService.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: payerChargeback.id },
+          data: {
+            balance: payerChargeback.balance.minus(
+              chargebackTransaction.amount,
+            ),
+          },
+        });
+
+        await tx.user.update({
+          where: { id: payeeChargeback.id },
+          data: {
+            balance: payeeChargeback.balance.add(chargebackTransaction.amount),
+          },
+        });
+
+        await tx.transaction.update({
+          where: { id: transactionToReverse.id },
+          data: {
+            status: 'reversed',
+            chargeBackTransactionId: chargebackTransaction.id,
+          },
+        });
+
+        return await tx.transaction.update({
+          where: { id: chargebackTransaction.id },
+          data: { status: 'completed' },
+        });
+      });
+    } catch {
+      throw new InternalServerErrorException('Failed to chargeback');
     }
   }
 }

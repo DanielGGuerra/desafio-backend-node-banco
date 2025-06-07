@@ -5,6 +5,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from 'nestjs-prisma';
 import { TransferParams } from './interfaces/wallet.models';
+import { BadRequestException } from '@nestjs/common';
 
 describe('WalletService', () => {
   let service: WalletService;
@@ -52,6 +53,7 @@ describe('WalletService', () => {
           useValue: {
             $transaction: jest.fn(),
             transaction: {
+              findUnique: jest.fn(),
               create: jest.fn(),
               update: jest.fn(),
             },
@@ -228,6 +230,232 @@ describe('WalletService', () => {
         },
       });
       expect(prismaService.$transaction).toHaveBeenCalledTimes(0);
+    });
+  });
+
+  describe('chargeback', () => {
+    it('should successfully perform a chargeback', async () => {
+      const originalTransaction: Transaction = {
+        id: 'original_transaction_id',
+        type: 'transfer',
+        status: 'completed',
+        amount: new Decimal(50),
+        payerBalanceBefore: new Decimal(100),
+        payerBalanceAfter: new Decimal(50),
+        payerId: 'payer_id',
+        payeeId: 'payee_id',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+        statusMotive: null,
+        chargeBackTransactionId: null,
+        reversedTransactionId: null,
+      };
+
+      const payer: User = {
+        id: 'payer_id',
+        name: 'payer_name',
+        balance: new Decimal(50),
+        email: 'payer_email',
+        password: 'payer_password',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+      };
+
+      const payee: User = {
+        id: 'payee_id',
+        name: 'payee_name',
+        balance: new Decimal(50),
+        email: 'payee_email',
+        password: 'payee_password',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+      };
+
+      const chargebackTransaction: Transaction = {
+        id: 'chargeback_transaction_id',
+        type: 'chargeback',
+        status: 'completed',
+        amount: new Decimal(50),
+        payerBalanceBefore: new Decimal(50),
+        payerBalanceAfter: new Decimal(0),
+        payerId: 'payee_id',
+        payeeId: 'payer_id',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+        statusMotive: null,
+        chargeBackTransactionId: null,
+        reversedTransactionId: 'original_transaction_id',
+      };
+
+      (prismaService.transaction.findUnique as jest.Mock).mockResolvedValue({
+        ...originalTransaction,
+        payer,
+        payee,
+      });
+
+      (prismaService.transaction.create as jest.Mock).mockResolvedValue(
+        chargebackTransaction,
+      );
+      (prismaService.$transaction as jest.Mock).mockResolvedValue(
+        chargebackTransaction,
+      );
+
+      const result = await service.chargeback(
+        'payer_id',
+        'original_transaction_id',
+      );
+
+      expect(result).toEqual(chargebackTransaction);
+      expect(prismaService.transaction.findUnique).toHaveBeenCalledWith({
+        include: {
+          payer: true,
+          payee: true,
+        },
+        where: { payerId: 'payer_id', id: 'original_transaction_id' },
+      });
+      expect(prismaService.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw an error if transaction is not found', async () => {
+      (prismaService.transaction.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      await expect(
+        service.chargeback('payer_id', 'invalid_transaction_id'),
+      ).rejects.toThrow('Transaction not found');
+    });
+
+    it('should throw an error if transaction is not completed', async () => {
+      const transaction: Transaction = {
+        id: 'transaction_id',
+        type: 'transfer',
+        status: 'pending',
+        amount: new Decimal(50),
+        payerBalanceBefore: new Decimal(100),
+        payerBalanceAfter: new Decimal(50),
+        payerId: 'payer_id',
+        payeeId: 'payee_id',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+        statusMotive: null,
+        chargeBackTransactionId: null,
+        reversedTransactionId: null,
+      };
+
+      (prismaService.transaction.findUnique as jest.Mock).mockResolvedValue({
+        ...transaction,
+        payer: null,
+        payee: null,
+      });
+
+      await expect(
+        service.chargeback('payer_id', 'transaction_id'),
+      ).rejects.toThrow('Transaction is not completed');
+    });
+
+    it('should throw an error if transaction is not a transfer', async () => {
+      const transaction: Transaction = {
+        id: 'transaction_id',
+        type: 'deposit',
+        status: 'completed',
+        amount: new Decimal(50),
+        payerBalanceBefore: new Decimal(100),
+        payerBalanceAfter: new Decimal(150),
+        payerId: 'payer_id',
+        payeeId: null,
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+        statusMotive: null,
+        chargeBackTransactionId: null,
+        reversedTransactionId: null,
+      };
+
+      (prismaService.transaction.findUnique as jest.Mock).mockResolvedValue({
+        ...transaction,
+        payer: null,
+        payee: null,
+      });
+
+      await expect(
+        service.chargeback('payer_id', 'transaction_id'),
+      ).rejects.toThrow('Transaction is not a transfer');
+    });
+
+    it('should throw an error if payer or payee is not found', async () => {
+      const transaction: Transaction = {
+        id: 'transaction_id',
+        type: 'transfer',
+        status: 'completed',
+        amount: new Decimal(50),
+        payerBalanceBefore: new Decimal(100),
+        payerBalanceAfter: new Decimal(50),
+        payerId: 'payer_id',
+        payeeId: 'payee_id',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+        statusMotive: null,
+        chargeBackTransactionId: null,
+        reversedTransactionId: null,
+      };
+
+      (prismaService.transaction.findUnique as jest.Mock).mockResolvedValue({
+        ...transaction,
+        payer: null,
+        payee: null,
+      });
+
+      await expect(
+        service.chargeback('payer_id', 'transaction_id'),
+      ).rejects.toThrow('Payer or payee not found');
+    });
+
+    it('should throw an error if payee has insufficient balance', async () => {
+      const transaction: Transaction = {
+        id: 'transaction_id',
+        type: 'transfer',
+        status: 'completed',
+        amount: new Decimal(50),
+        payerBalanceBefore: new Decimal(100),
+        payerBalanceAfter: new Decimal(50),
+        payerId: 'payer_id',
+        payeeId: 'payee_id',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+        statusMotive: null,
+        chargeBackTransactionId: null,
+        reversedTransactionId: null,
+      };
+
+      const payer: User = {
+        id: 'payer_id',
+        name: 'payer_name',
+        balance: new Decimal(50),
+        email: 'payer_email',
+        password: 'payer_password',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+      };
+
+      const payee: User = {
+        id: 'payee_id',
+        name: 'payee_name',
+        balance: new Decimal(0),
+        email: 'payee_email',
+        password: 'payee_password',
+        createdAt: new Date('2025-06-05T13:00'),
+        updatedAt: new Date('2025-06-05T13:00'),
+      };
+
+      (prismaService.transaction.findUnique as jest.Mock).mockResolvedValue({
+        ...transaction,
+        payer,
+        payee,
+      });
+
+      await expect(
+        service.chargeback('payer_id', 'transaction_id'),
+      ).rejects.toThrow();
     });
   });
 });
