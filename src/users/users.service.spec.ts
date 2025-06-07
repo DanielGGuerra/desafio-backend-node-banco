@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
-import { PrismaService } from '../database/prisma.service';
 import { User } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { HashUtils } from '../common/utils/hash';
+import { PrismaService } from 'nestjs-prisma';
 
 describe('UsersService', () => {
   let service: UsersService;
