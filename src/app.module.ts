@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from 'nestjs-prisma';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PrismaModule } from 'nestjs-prisma';
     }),
     UsersModule,
     AuthModule,
+    WalletModule,
   ],
 })
 export class AppModule {}
