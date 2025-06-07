@@ -1,0 +1,58 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table User {
+  id String [pk]
+  name String [not null]
+  email String [unique, not null]
+  password String [not null]
+  balance Decimal [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  paidTransactions Transaction [not null]
+  receivedTransactions Transaction [not null]
+}
+
+Table Transaction {
+  id String [pk]
+  type TypeTransaction [not null, default: 'transfer']
+  status StatusTransaction [not null, default: 'pending']
+  statusMotive StatusMotiveTransaction
+  amount Decimal [not null]
+  payerBalanceBefore Decimal [not null]
+  payerBalanceAfter Decimal [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  payerId String
+  payer User
+  payeeId String
+  payee User
+  chargeBackTransactionId String
+  chargeBackTransaction Transaction
+  reversedTransactionId String [unique]
+  reversedTransaction Transaction
+}
+
+Enum StatusTransaction {
+  pending
+  completed
+  reversed
+  failed
+}
+
+Enum StatusMotiveTransaction {
+  INSUFFICIENT_BALANCE
+}
+
+Enum TypeTransaction {
+  deposit
+  transfer
+  chargeback
+}
+
+Ref: Transaction.payerId > User.id
+
+Ref: Transaction.payeeId > User.id
+
+Ref: Transaction.reversedTransactionId - Transaction.id
