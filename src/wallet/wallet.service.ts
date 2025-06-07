@@ -6,15 +6,13 @@ import { UsersService } from '../users/users.service';
 export class WalletService {
   constructor(private usersService: UsersService) {}
 
-  async balance(userId: string): Promise<string> {
+  async balance(userId: string): Promise<Decimal> {
     const user = await this.usersService.findOne(userId);
 
     if (!user) {
       throw new NotFoundException('Wallet not found');
     }
 
-    const balance = new Decimal(user.balance);
-
-    return balance.toFixed(2);
+    return user.balance;
   }
 }

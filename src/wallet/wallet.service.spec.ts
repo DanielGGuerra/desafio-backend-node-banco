@@ -46,7 +46,7 @@ describe('WalletService', () => {
 
       const balance = await service.balance('valid_id');
 
-      expect(balance).toBe('100.00');
+      expect(balance).toEqual(new Decimal(100));
       expect(usersService.findOne).toHaveBeenCalledWith('valid_id');
       expect(usersService.findOne).toHaveBeenCalledTimes(1);
     });
