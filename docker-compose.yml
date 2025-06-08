@@ -10,7 +10,7 @@ volumes:
 services:
   postgres:
     image: postgres:15
-    container_name: database
+    container_name: database-bank
     environment:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev
@@ -21,3 +21,32 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - networks_bank
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    
+  api:
+    container_name: api-bank
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://dev:dev@database-bank:5432/dev?schema=public
+      JWT_SECRET: DEV_SECRET
+      JWT_EXPIRATION: 1d
+      PORT: 3000
+    networks:
+      - networks_bank
+    command: >
+      sh -c "
+      yarn prisma migrate deploy && 
+      yarn start:prod
+      "
