@@ -101,6 +101,14 @@ Authorization: Bearer <jwt_token>
 Authorization: Bearer <jwt_token>
 ```
 
+### List Transactions
+
+`GET /wallet/transactions?userRole={payee | payer}`
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
 ## Testes
 
 - **Testes unitários:**
@@ -111,3 +119,9 @@ Authorization: Bearer <jwt_token>
   ```bash
   yarn test:e2e
   ```
+
+## Executar Docker
+
+```bash
+docker compose up --build -d
+```
