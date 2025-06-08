@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,6 +19,8 @@ async function bootstrap() {
 }
 
 export function configureApp(app: INestApplication) {
+  app.enableCors();
+  app.use(helmet());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 }
 
