@@ -1,8 +1,8 @@
 {
-  "name": "desafio-backend-grupo-adriano-cobuccio",
+  "name": "desafio-backend-node-banco",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Desafio Backend Node - Banco",
+  "author": "Daniel Guerra",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
